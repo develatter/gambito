@@ -13,11 +13,13 @@ const MARGIN_X: u16 = 2;
 /// File labels under the squares.
 const MARGIN_Y: u16 = 1;
 
-const LIGHT_SQ: Color = Color::Rgb(240, 217, 181);
-const DARK_SQ: Color = Color::Rgb(181, 136, 99);
-const SELECTED: Color = Color::Rgb(130, 151, 105);
-const LAST_MOVE_LIGHT: Color = Color::Rgb(205, 210, 106);
-const LAST_MOVE_DARK: Color = Color::Rgb(170, 162, 58);
+// Midtone squares on purpose: pure-white and near-black fills need the
+// board to sit between them to contrast with both (no outlines).
+const LIGHT_SQ: Color = Color::Rgb(201, 166, 125);
+const DARK_SQ: Color = Color::Rgb(135, 95, 65);
+const SELECTED: Color = Color::Rgb(118, 138, 92);
+const LAST_MOVE_LIGHT: Color = Color::Rgb(183, 187, 95);
+const LAST_MOVE_DARK: Color = Color::Rgb(148, 140, 52);
 const CHECK: Color = Color::Rgb(212, 83, 71);
 const WHITE_PIECE: Color = Color::Rgb(255, 255, 255);
 const BLACK_PIECE: Color = Color::Rgb(20, 18, 16);
