@@ -17,7 +17,7 @@ impl Widget for MoveListWidget<'_> {
             let black = pair.get(1).map(|m| m.san.as_str()).unwrap_or("");
             lines.push(Line::from(format!("{:>3}. {:<8} {}", i + 1, white, black)));
         }
-        let block = Block::bordered().title(" Jugadas ");
+        let block = Block::bordered().title(" Moves ");
         // Keep the tail visible once the list outgrows the box.
         let visible = block.inner(area).height as usize;
         let skip = lines.len().saturating_sub(visible);

@@ -2,15 +2,15 @@ use gambito_tui::Options;
 use std::process::ExitCode;
 
 const USAGE: &str = "\
-gambito — ajedrez de terminal
+gambito — terminal chess
 
-USO:
-    gambito [OPCIONES]
+USAGE:
+    gambito [OPTIONS]
 
-OPCIONES:
-    --fen <FEN>   Empieza una partida desde esta posición
-    --ascii       Letras ASCII en vez de piezas Unicode
-    -h, --help    Muestra esta ayuda";
+OPTIONS:
+    --fen <FEN>   Start a game from this position
+    --ascii       ASCII letters instead of Unicode pieces
+    -h, --help    Show this help";
 
 fn main() -> ExitCode {
     let mut options = Options { fen: None, ascii: false };
@@ -20,7 +20,7 @@ fn main() -> ExitCode {
             "--fen" => match args.next() {
                 Some(fen) => options.fen = Some(fen),
                 None => {
-                    eprintln!("--fen necesita un valor\n\n{USAGE}");
+                    eprintln!("--fen needs a value\n\n{USAGE}");
                     return ExitCode::FAILURE;
                 }
             },
@@ -34,7 +34,7 @@ fn main() -> ExitCode {
                 match value {
                     Some(fen) => options.fen = Some(fen.to_string()),
                     None => {
-                        eprintln!("opción desconocida: {other}\n\n{USAGE}");
+                        eprintln!("unknown option: {other}\n\n{USAGE}");
                         return ExitCode::FAILURE;
                     }
                 }

@@ -19,10 +19,10 @@ impl Widget for PromoPopup {
         );
         Clear.render(popup, buf);
         Paragraph::new(vec![
-            Line::from("q dama   r torre".bold()),
-            Line::from("b alfil  n caballo".bold()),
+            Line::from("q queen   r rook".bold()),
+            Line::from("b bishop  n knight".bold()),
         ])
-        .block(Block::bordered().title(" Promoción "))
+        .block(Block::bordered().title(" Promotion "))
         .render(popup, buf);
     }
 }

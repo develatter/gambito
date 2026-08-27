@@ -1,6 +1,7 @@
 //! Board rendering and mouse hit-testing. Both go through BoardGeometry so
 //! the renderer and the mouse math can never disagree.
 
+use crate::widgets::sprites;
 use gambito_engine::{Bitboard, Color as Side, PieceKind, Position, Square};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -155,10 +156,15 @@ impl Widget for BoardWidget<'_> {
 
                 let (cx, cy) = geom.center(file_disp, rank_disp);
                 if let Some(piece) = self.pos.piece_at(sq) {
-                    let fg = if piece.color == Side::White { WHITE_PIECE } else { BLACK_PIECE };
-                    let cell = &mut buf[(cx, cy)];
-                    cell.set_char(glyph(piece.kind, self.ascii, piece.color));
-                    cell.set_fg(fg);
+                    if !self.ascii && sprites::fits(geom.square_w, geom.square_h) {
+                        sprites::draw(buf, x0, y0, geom.square_w, geom.square_h, piece);
+                    } else {
+                        let fg =
+                            if piece.color == Side::White { WHITE_PIECE } else { BLACK_PIECE };
+                        let cell = &mut buf[(cx, cy)];
+                        cell.set_char(glyph(piece.kind, self.ascii, piece.color));
+                        cell.set_fg(fg);
+                    }
                     // Capture targets keep the piece and get a corner marker.
                     if self.targets.contains(sq) {
                         let cell = &mut buf[(x0 + geom.square_w - 1, y0)];

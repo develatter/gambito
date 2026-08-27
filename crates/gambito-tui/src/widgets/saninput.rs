@@ -13,12 +13,12 @@ impl Widget for InputBar<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let line = match self.input {
             Some(text) => Line::from(vec![
-                Span::from(" jugada> ").bold(),
+                Span::from(" move> ").bold(),
                 Span::from(text.to_string()),
                 Span::from("█").dim(),
             ]),
             None => Line::from(
-                " clic: mover · : SAN · u deshacer · f girar · m menú · q salir ".dim(),
+                " click: move · : SAN · u undo · f flip · m menu · q quit ".dim(),
             ),
         };
         Paragraph::new(line).render(area, buf);

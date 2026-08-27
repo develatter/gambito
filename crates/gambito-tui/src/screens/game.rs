@@ -94,7 +94,7 @@ impl GameScreen {
         match action {
             Action::Quit => {
                 self.confirm_quit = true;
-                self.message = Some("¿Salir de gambito? Enter/s confirma, otra tecla cancela.".into());
+                self.message = Some("Quit gambito? Enter/y confirms, any other key cancels.".into());
             }
             Action::ToMenu => return Transition::ToMenu,
             Action::Undo => {
@@ -102,7 +102,7 @@ impl GameScreen {
                     self.selected = None;
                     self.message = None;
                 } else {
-                    self.message = Some("Nada que deshacer.".into());
+                    self.message = Some("Nothing to undo.".into());
                 }
             }
             Action::Flip => self.flipped = !self.flipped,
@@ -170,7 +170,7 @@ impl GameScreen {
             return;
         }
         if self.game.status().is_over() {
-            self.message = Some("La partida ha terminado.".into());
+            self.message = Some("The game is over.".into());
             self.input = None;
             return;
         }
@@ -180,7 +180,7 @@ impl GameScreen {
                 self.message = None;
                 self.input = None;
             }
-            None => self.message = Some(format!("Jugada inválida: {text}")),
+            None => self.message = Some(format!("Invalid move: {text}")),
         }
     }
 

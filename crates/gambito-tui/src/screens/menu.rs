@@ -7,11 +7,11 @@ use ratatui::widgets::{Block, Paragraph};
 use ratatui::Frame;
 
 const ITEMS: [(&str, bool); 5] = [
-    ("Partida local (hotseat)", true),
-    ("Contra la IA        (M2)", false),
-    ("Blitz online        (M3)", false),
-    ("Correspondencia     (M4)", false),
-    ("Salir", true),
+    ("Local game (hotseat)", true),
+    ("Play the AI        (M2)", false),
+    ("Online blitz        (M3)", false),
+    ("Correspondence      (M4)", false),
+    ("Quit", true),
 ];
 
 pub struct MenuScreen {
@@ -38,7 +38,7 @@ impl MenuScreen {
             Action::Enter => match self.selected {
                 0 => return Transition::StartHotseat,
                 4 => return Transition::Quit,
-                _ => self.note = Some("Todavía no disponible: llega en un milestone posterior."),
+                _ => self.note = Some("Not available yet: coming in a later milestone."),
             },
             _ => {}
         }
@@ -48,7 +48,7 @@ impl MenuScreen {
     pub fn render(&self, frame: &mut Frame) {
         let mut lines = vec![
             Line::from("♞ g a m b i t o".bold()),
-            Line::from("ajedrez de terminal".dim()),
+            Line::from("terminal chess".dim()),
             Line::from(""),
         ];
         for (i, (label, enabled)) in ITEMS.iter().enumerate() {
@@ -63,7 +63,7 @@ impl MenuScreen {
             });
         }
         lines.push(Line::from(""));
-        lines.push(Line::from(self.note.unwrap_or("↑/↓ y Enter · q para salir").dim()));
+        lines.push(Line::from(self.note.unwrap_or("↑/↓ and Enter · q to quit").dim()));
 
         let [area] = Layout::horizontal([Constraint::Length(44)])
             .flex(Flex::Center)
