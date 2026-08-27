@@ -1,0 +1,14 @@
+[package]
+name = "gambito"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Terminal chess: own engine, own AI, P2P multiplayer."
+
+[[bin]]
+name = "gambito"
+path = "src/main.rs"
+
+[dependencies]
+gambito-engine.workspace = true
+gambito-tui.workspace = true

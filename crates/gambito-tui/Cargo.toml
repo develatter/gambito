@@ -1,0 +1,11 @@
+[package]
+name = "gambito-tui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Ratatui front-end for gambito."
+
+[dependencies]
+gambito-engine.workspace = true
+ratatui.workspace = true
+crossterm.workspace = true

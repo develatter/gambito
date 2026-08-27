@@ -1,0 +1,21 @@
+[workspace]
+resolver = "2"
+members = ["crates/gambito-engine", "crates/gambito-tui", "crates/gambito"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[workspace.dependencies]
+gambito-engine = { path = "crates/gambito-engine" }
+gambito-tui = { path = "crates/gambito-tui" }
+ratatui = "0.29"
+crossterm = "0.28"
+
+[profile.release]
+opt-level = "z"
+lto = "fat"
+codegen-units = 1
+strip = "symbols"
+panic = "abort"

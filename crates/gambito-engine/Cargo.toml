@@ -1,0 +1,8 @@
+[package]
+name = "gambito-engine"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Chess rules, move generation and notation for gambito. Zero dependencies."
+
+[dependencies]
