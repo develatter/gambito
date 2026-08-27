@@ -4,6 +4,7 @@ use crate::screens::menu::MenuScreen;
 use crate::screens::Transition;
 use crossterm::event::{DisableMouseCapture, EnableMouseCapture};
 use crossterm::execute;
+use gambito_ai::{MaterialEval, MctsBrain};
 use gambito_engine::Game;
 use ratatui::DefaultTerminal;
 use std::io;
@@ -78,6 +79,11 @@ impl App {
                 Transition::ToMenu => self.screen = Screen::Menu(MenuScreen::new()),
                 Transition::StartHotseat => {
                     self.screen = Screen::Game(GameScreen::new(Game::new(), self.ascii));
+                }
+                Transition::StartVsAi => {
+                    let brain = Box::new(MctsBrain::new(MaterialEval, 400));
+                    self.screen =
+                        Screen::Game(GameScreen::new(Game::new(), self.ascii).with_opponent(brain));
                 }
             }
         }

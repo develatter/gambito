@@ -167,6 +167,7 @@ name = "gambito-tui"
 version = "0.1.0"
 dependencies = [
  "crossterm",
+ "gambito-ai",
  "gambito-engine",
  "ratatui",
 ]

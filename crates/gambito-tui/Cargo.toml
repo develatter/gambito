@@ -7,5 +7,6 @@ description = "Ratatui front-end for gambito."
 
 [dependencies]
 gambito-engine.workspace = true
+gambito-ai.workspace = true
 ratatui.workspace = true
 crossterm.workspace = true

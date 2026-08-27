@@ -7,4 +7,5 @@ pub enum Transition {
     Quit,
     ToMenu,
     StartHotseat,
+    StartVsAi,
 }

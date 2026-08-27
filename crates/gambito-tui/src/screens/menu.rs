@@ -8,7 +8,7 @@ use ratatui::Frame;
 
 const ITEMS: [(&str, bool); 5] = [
     ("Local game (hotseat)", true),
-    ("Play the AI        (M2)", false),
+    ("Play the AI", true),
     ("Online blitz        (M3)", false),
     ("Correspondence      (M4)", false),
     ("Quit", true),
@@ -37,6 +37,7 @@ impl MenuScreen {
             }
             Action::Enter => match self.selected {
                 0 => return Transition::StartHotseat,
+                1 => return Transition::StartVsAi,
                 4 => return Transition::Quit,
                 _ => self.note = Some("Not available yet: coming in a later milestone."),
             },

@@ -1,4 +1,4 @@
-use gambito_engine::{Move, Position};
+use gambito_engine::{Move, PieceKind, Position};
 
 /// Position evaluation as MCTS consumes it: a prior probability per legal
 /// move (aligned with `moves`, should sum to ~1) and a value in [-1, 1]
@@ -21,10 +21,23 @@ impl Evaluator for MaterialEval {
 }
 
 /// Value in [-1, 1] from the side to move's perspective, from material only.
+/// tanh(diff/10) makes a queen-up position ~0.72 — clearly winning without
+/// saturating, so the search still prefers converting to mate.
 fn material_value(pos: &Position) -> f32 {
-    // TODO(human)
-    let _ = pos;
-    0.0
+    const WEIGHTS: [(PieceKind, f32); 5] = [
+        (PieceKind::Pawn, 1.0),
+        (PieceKind::Knight, 3.0),
+        (PieceKind::Bishop, 3.25),
+        (PieceKind::Rook, 5.0),
+        (PieceKind::Queen, 9.0),
+    ];
+    let mut diff = 0.0;
+    for (kind, weight) in WEIGHTS {
+        let us = pos.pieces(pos.side_to_move, kind).count() as f32;
+        let them = pos.pieces(pos.side_to_move.opposite(), kind).count() as f32;
+        diff += weight * (us - them);
+    }
+    (diff / 10.0).tanh()
 }
 
 #[cfg(test)]

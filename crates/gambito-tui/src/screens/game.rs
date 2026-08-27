@@ -5,7 +5,8 @@ use crate::widgets::movelist::MoveListWidget;
 use crate::widgets::promo::PromoPopup;
 use crate::widgets::saninput::InputBar;
 use crate::widgets::status::StatusWidget;
-use gambito_engine::{Bitboard, Game, Move, PieceKind, Square};
+use gambito_ai::Brain;
+use gambito_engine::{Bitboard, Color, Game, Move, PieceKind, Square};
 use ratatui::layout::{Constraint, Layout};
 use ratatui::widgets::Block;
 use ratatui::Frame;
@@ -23,6 +24,8 @@ pub struct GameScreen {
     confirm_quit: bool,
     /// Board geometry from the last render, for mouse hit-testing.
     geom: BoardGeometry,
+    /// When set, this brain plays Black and replies after each human move.
+    opponent: Option<Box<dyn Brain>>,
 }
 
 impl GameScreen {
@@ -37,7 +40,13 @@ impl GameScreen {
             promo: None,
             confirm_quit: false,
             geom: BoardGeometry::default(),
+            opponent: None,
         }
+    }
+
+    pub fn with_opponent(mut self, brain: Box<dyn Brain>) -> GameScreen {
+        self.opponent = Some(brain);
+        self
     }
 
     pub fn text_entry(&self) -> bool {
@@ -99,6 +108,12 @@ impl GameScreen {
             Action::ToMenu => return Transition::ToMenu,
             Action::Undo => {
                 if self.game.undo() {
+                    // Vs the AI, take back its reply too so it's ours to move.
+                    if self.opponent.is_some()
+                        && self.game.position().side_to_move == Color::Black
+                    {
+                        self.game.undo();
+                    }
                     self.selected = None;
                     self.message = None;
                 } else {
@@ -161,6 +176,17 @@ impl GameScreen {
         self.game.play(mv);
         self.message = None;
         self.input = None;
+        self.maybe_ai_reply();
+    }
+
+    fn maybe_ai_reply(&mut self) {
+        let Some(brain) = &mut self.opponent else { return };
+        if self.game.status().is_over() || self.game.position().side_to_move != Color::Black {
+            return;
+        }
+        if let Some(mv) = brain.choose(&self.game) {
+            self.game.play(mv);
+        }
     }
 
     fn submit_san(&mut self) {
@@ -179,6 +205,7 @@ impl GameScreen {
                 self.selected = None;
                 self.message = None;
                 self.input = None;
+                self.maybe_ai_reply();
             }
             None => self.message = Some(format!("Invalid move: {text}")),
         }
@@ -313,6 +340,19 @@ mod tests {
         assert!(s.promo.is_some());
         s.handle(Action::Char('n')); // underpromotes to knight
         assert_eq!(s.game.moves_played()[0].san, "fxg8=N");
+    }
+
+    #[test]
+    fn ai_replies_and_undo_takes_back_both_plies() {
+        use gambito_ai::RandomBrain;
+        let mut s = screen().with_opponent(Box::new(RandomBrain::new(7)));
+        click_square(&mut s, "e2");
+        click_square(&mut s, "e4");
+        assert_eq!(s.game.moves_played().len(), 2, "AI should reply at once");
+        assert_eq!(s.game.position().side_to_move, Color::White);
+        s.handle(Action::Undo);
+        assert_eq!(s.game.moves_played().len(), 0);
+        assert_eq!(s.game.position().side_to_move, Color::White);
     }
 
     #[test]
