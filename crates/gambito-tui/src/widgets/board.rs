@@ -64,10 +64,12 @@ impl BoardGeometry {
         )
     }
 
-    /// Center cell of a square, where glyphs and markers go.
+    /// Center cell of a square, where glyphs and markers go. Even sizes
+    /// round toward the lower-right, which reads as centered for glyphs
+    /// that occupy the upper-left of their own cell.
     fn center(&self, file_disp: u16, rank_disp: u16) -> (u16, u16) {
         let (x, y) = self.origin(file_disp, rank_disp);
-        (x + (self.square_w - 1) / 2, y + (self.square_h - 1) / 2)
+        (x + self.square_w / 2, y + self.square_h / 2)
     }
 
     /// Maps a terminal cell back to a board square.

@@ -34,11 +34,10 @@ pub fn debug_board_dump(pos: &gambito_engine::Position, width: u16, height: u16)
         })
         .unwrap();
     // Decode each cell into its two half-block pixels so silhouettes are
-    // visible without color: '#' white fill, '@' black fill, '+' outline.
+    // visible without color: '#' white fill, '@' black fill.
     let px_char = |color: ratatui::style::Color| match color {
         ratatui::style::Color::Rgb(255, 255, 255) => '#',
         ratatui::style::Color::Rgb(25, 22, 20) => '@',
-        ratatui::style::Color::Rgb(60, 50, 40) | ratatui::style::Color::Rgb(235, 230, 220) => '+',
         _ => '.',
     };
     let buffer = terminal.backend().buffer();
