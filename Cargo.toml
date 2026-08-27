@@ -1,6 +1,11 @@
 [workspace]
 resolver = "2"
-members = ["crates/gambito-engine", "crates/gambito-tui", "crates/gambito"]
+members = [
+    "crates/gambito-engine",
+    "crates/gambito-ai",
+    "crates/gambito-tui",
+    "crates/gambito",
+]
 
 [workspace.package]
 version = "0.1.0"
@@ -9,9 +14,11 @@ license = "MIT"
 
 [workspace.dependencies]
 gambito-engine = { path = "crates/gambito-engine" }
+gambito-ai = { path = "crates/gambito-ai" }
 gambito-tui = { path = "crates/gambito-tui" }
 ratatui = "0.29"
 crossterm = "0.28"
+fastrand = "2"
 
 [profile.release]
 opt-level = "z"

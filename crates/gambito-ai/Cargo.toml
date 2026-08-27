@@ -1,0 +1,10 @@
+[package]
+name = "gambito-ai"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Search and evaluation for gambito: Brain trait, MCTS, NN inference."
+
+[dependencies]
+gambito-engine.workspace = true
+fastrand.workspace = true
