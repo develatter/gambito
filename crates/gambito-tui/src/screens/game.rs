@@ -1,12 +1,12 @@
 use crate::event::Action;
 use crate::screens::Transition;
-use crate::widgets::board::{self, BoardWidget, BOARD_H, BOARD_W};
+use crate::widgets::board::{BoardGeometry, BoardWidget};
 use crate::widgets::movelist::MoveListWidget;
 use crate::widgets::promo::PromoPopup;
 use crate::widgets::saninput::InputBar;
 use crate::widgets::status::StatusWidget;
 use gambito_engine::{Bitboard, Game, Move, PieceKind, Square};
-use ratatui::layout::{Constraint, Layout, Rect};
+use ratatui::layout::{Constraint, Layout};
 use ratatui::widgets::Block;
 use ratatui::Frame;
 
@@ -21,8 +21,8 @@ pub struct GameScreen {
     /// Pending promotion: origin and target chosen, piece kind not yet.
     promo: Option<(Square, Square)>,
     confirm_quit: bool,
-    /// Board interior from the last render, for mouse hit-testing.
-    board_area: Rect,
+    /// Board geometry from the last render, for mouse hit-testing.
+    geom: BoardGeometry,
 }
 
 impl GameScreen {
@@ -36,7 +36,7 @@ impl GameScreen {
             message: None,
             promo: None,
             confirm_quit: false,
-            board_area: Rect::default(),
+            geom: BoardGeometry::default(),
         }
     }
 
@@ -124,7 +124,7 @@ impl GameScreen {
     }
 
     fn click(&mut self, column: u16, row: u16) {
-        let Some(sq) = board::square_at(self.board_area, column, row, self.flipped) else {
+        let Some(sq) = self.geom.square_at(column, row, self.flipped) else {
             return;
         };
         if self.game.status().is_over() {
@@ -199,23 +199,18 @@ impl GameScreen {
     }
 
     pub fn render(&mut self, frame: &mut Frame) {
+        // The board owns the flexible space; the side column is fixed and
+        // deliberately understated.
         let [main, input_bar] =
-            Layout::vertical([Constraint::Min(BOARD_H + 2), Constraint::Length(1)])
-                .areas(frame.area());
+            Layout::vertical([Constraint::Min(10), Constraint::Length(1)]).areas(frame.area());
         let [board_col, side_col] =
-            Layout::horizontal([Constraint::Length(BOARD_W + 4), Constraint::Min(20)]).areas(main);
+            Layout::horizontal([Constraint::Min(40), Constraint::Length(28)]).areas(main);
         let [movelist_area, status_area] =
             Layout::vertical([Constraint::Min(6), Constraint::Length(4)]).areas(side_col);
 
         let board_block = Block::bordered().title(" gambito ");
         let inner = board_block.inner(board_col);
-        // Center the fixed-size board inside its column.
-        self.board_area = Rect::new(
-            inner.x + inner.width.saturating_sub(BOARD_W) / 2,
-            inner.y + inner.height.saturating_sub(BOARD_H) / 2,
-            BOARD_W.min(inner.width),
-            BOARD_H.min(inner.height),
-        );
+        self.geom = BoardGeometry::fit(inner);
         frame.render_widget(board_block, board_col);
 
         let pos = self.game.position();
@@ -226,6 +221,7 @@ impl GameScreen {
         frame.render_widget(
             BoardWidget {
                 pos,
+                geom: self.geom,
                 flipped: self.flipped,
                 ascii: self.ascii,
                 selected: self.selected,
@@ -233,7 +229,7 @@ impl GameScreen {
                 last_move,
                 check,
             },
-            self.board_area,
+            inner,
         );
 
         frame.render_widget(MoveListWidget { moves: self.game.moves_played() }, movelist_area);
@@ -253,10 +249,16 @@ impl GameScreen {
 mod tests {
     use super::*;
 
+    use ratatui::layout::Rect;
+
+    fn test_geom() -> BoardGeometry {
+        BoardGeometry { area: Rect::new(0, 0, 34, 17), square_w: 4, square_h: 2 }
+    }
+
     fn screen() -> GameScreen {
         let mut s = GameScreen::new(Game::new(), true);
         // Fixed geometry so clicks can be computed: board at origin.
-        s.board_area = Rect::new(0, 0, BOARD_W, BOARD_H);
+        s.geom = test_geom();
         s
     }
 
@@ -305,12 +307,23 @@ mod tests {
             Game::from_fen("2k3r1/5P2/8/8/8/8/8/4K3 w - - 0 1").unwrap(),
             true,
         );
-        s.board_area = Rect::new(0, 0, BOARD_W, BOARD_H);
+        s.geom = test_geom();
         click_square(&mut s, "f7");
         click_square(&mut s, "g8");
         assert!(s.promo.is_some());
         s.handle(Action::Char('n')); // underpromotes to knight
         assert_eq!(s.game.moves_played()[0].san, "fxg8=N");
+    }
+
+    #[test]
+    fn render_smoke_at_many_sizes() {
+        use ratatui::backend::TestBackend;
+        use ratatui::Terminal;
+        for (w, h) in [(20, 8), (40, 12), (80, 24), (127, 62), (220, 70)] {
+            let mut s = GameScreen::new(Game::new(), true);
+            let mut terminal = Terminal::new(TestBackend::new(w, h)).unwrap();
+            terminal.draw(|f| s.render(f)).unwrap();
+        }
     }
 
     #[test]
