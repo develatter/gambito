@@ -5,21 +5,22 @@
 
 mod attacks;
 mod bitboard;
-mod fen;
+pub mod fen;
 mod game;
 mod movegen;
 mod moves;
 mod perft;
 mod position;
-mod san;
+pub mod san;
 mod types;
-mod uci;
+pub mod uci;
 mod zobrist;
 
 pub use bitboard::Bitboard;
 pub use fen::FenError;
-pub use game::{Game, GameStatus};
+pub use game::{Game, GameStatus, PlayedMove};
+pub use movegen::legal_moves;
 pub use moves::{Move, MoveFlags, MoveList};
-pub use perft::perft;
+pub use perft::{perft, perft_divide};
 pub use position::Position;
 pub use types::{CastlingRights, Color, Piece, PieceKind, Square};
