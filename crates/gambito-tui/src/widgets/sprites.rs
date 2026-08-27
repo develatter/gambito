@@ -28,10 +28,10 @@ const SPRITES: [[&str; BASE]; 6] = [
         ".######.",
         "........",
     ],
-    // Knight: a "7" with a leg, ears on top.
+    // Knight: a "7" with a leg; one ear at the base of the head.
     [
         "........",
-        ".#.#....",
+        ".....#..",
         ".######.",
         ".######.",
         "....###.",
