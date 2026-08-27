@@ -162,28 +162,24 @@ fn is_insufficient_material(pos: &Position) -> bool {
     let knights = pos.pieces(Color::White, PieceKind::Knight).count()
         + pos.pieces(Color::Black, PieceKind::Knight).count();
 
-    match bishops + knights {
-        0 | 1 => true,
-        _ => {
-            // Only bishops left: dead if they all live on one square color.
-            if knights == 0 {
-                let mut light = false;
-                let mut dark = false;
-                for color in [Color::White, Color::Black] {
-                    for sq in pos.pieces(color, PieceKind::Bishop) {
-                        if (sq.file() + sq.rank()) % 2 == 1 {
-                            light = true;
-                        } else {
-                            dark = true;
-                        }
-                    }
-                }
-                !(light && dark)
-            } else {
-                false
+    if bishops + knights <= 1 {
+        return true; // K vs K, K+B vs K, K+N vs K
+    }
+    if knights > 0 {
+        return false; // knight plus anything else can still mate
+    }
+    // Only bishops left: dead if they all live on one square color.
+    let mut light = false;
+    let mut dark = false;
+    for color in [Color::White, Color::Black] {
+        for sq in pos.pieces(color, PieceKind::Bishop) {
+            match (sq.file() + sq.rank()) % 2 {
+                1 => light = true,
+                _ => dark = true,
             }
         }
     }
+    !(light && dark)
 }
 
 #[cfg(test)]

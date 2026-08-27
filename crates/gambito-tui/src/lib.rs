@@ -1,1 +1,9 @@
-//! Ratatui front-end for gambito. UI lands after the engine's perft gate.
+//! Ratatui front-end for gambito: menu + hotseat game screen with mouse
+//! and SAN keyboard input.
+
+mod app;
+mod event;
+mod screens;
+mod widgets;
+
+pub use app::{run, Options};

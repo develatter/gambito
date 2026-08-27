@@ -92,7 +92,6 @@ fn normalize(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use crate::fen;
-    use crate::position::Position;
 
     fn roundtrip(fen: &str, san: &str) {
         let pos = fen::parse(fen).unwrap();
