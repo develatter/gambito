@@ -38,15 +38,23 @@ pub struct Game {
 
 impl Game {
     pub fn new() -> Game {
-        Game { positions: vec![Position::startpos()], played: Vec::new() }
+        Game {
+            positions: vec![Position::startpos()],
+            played: Vec::new(),
+        }
     }
 
     pub fn from_fen(fen: &str) -> Result<Game, FenError> {
-        Ok(Game { positions: vec![fen::parse(fen)?], played: Vec::new() })
+        Ok(Game {
+            positions: vec![fen::parse(fen)?],
+            played: Vec::new(),
+        })
     }
 
     pub fn position(&self) -> &Position {
-        self.positions.last().expect("at least the initial position")
+        self.positions
+            .last()
+            .expect("at least the initial position")
     }
 
     pub fn moves_played(&self) -> &[PlayedMove] {
@@ -94,7 +102,9 @@ impl Game {
         let pos = self.position();
         if self.legal_moves().is_empty() {
             return if pos.in_check(pos.side_to_move) {
-                GameStatus::Checkmate { winner: pos.side_to_move.opposite() }
+                GameStatus::Checkmate {
+                    winner: pos.side_to_move.opposite(),
+                }
             } else {
                 GameStatus::Stalemate
             };
@@ -146,11 +156,34 @@ fn is_insufficient_material(pos: &Position) -> bool {
             }
         }
     }
-    // TODO(human): decide which minor-piece endings count as dead positions
-    // and return true for them. `pos.pieces(color, kind)` gives a Bitboard
-    // with `.count()`; light/dark square of a bishop is
-    // `(sq.file() + sq.rank()) % 2` for `sq` in `pos.pieces(c, Bishop)`.
-    false
+
+    let bishops = pos.pieces(Color::White, PieceKind::Bishop).count()
+        + pos.pieces(Color::Black, PieceKind::Bishop).count();
+    let knights = pos.pieces(Color::White, PieceKind::Knight).count()
+        + pos.pieces(Color::Black, PieceKind::Knight).count();
+
+    match bishops + knights {
+        0 | 1 => true,
+        _ => {
+            // Only bishops left: dead if they all live on one square color.
+            if knights == 0 {
+                let mut light = false;
+                let mut dark = false;
+                for color in [Color::White, Color::Black] {
+                    for sq in pos.pieces(color, PieceKind::Bishop) {
+                        if (sq.file() + sq.rank()) % 2 == 1 {
+                            light = true;
+                        } else {
+                            dark = true;
+                        }
+                    }
+                }
+                !(light && dark)
+            } else {
+                false
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -161,9 +194,15 @@ mod tests {
     fn fools_mate() {
         let mut game = Game::new();
         for m in ["f3", "e5", "g4", "Qh4#"] {
-            game.play_san(m).unwrap_or_else(|| panic!("{m} should be legal"));
+            game.play_san(m)
+                .unwrap_or_else(|| panic!("{m} should be legal"));
         }
-        assert_eq!(game.status(), GameStatus::Checkmate { winner: Color::Black });
+        assert_eq!(
+            game.status(),
+            GameStatus::Checkmate {
+                winner: Color::Black
+            }
+        );
     }
 
     #[test]
@@ -189,6 +228,27 @@ mod tests {
             game.play_san(m).unwrap();
         }
         assert_eq!(game.status(), GameStatus::ThreefoldRepetition);
+    }
+
+    #[test]
+    fn insufficient_material_cases() {
+        // K vs K, K+N vs K, and same-colored bishops are dead.
+        for fen in [
+            "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "4k3/8/8/8/8/8/8/4KN2 w - - 0 1",
+            "4kb2/8/8/8/8/8/8/2B1K3 w - - 0 1", // f8 and c1 are both dark
+        ] {
+            let game = Game::from_fen(fen).unwrap();
+            assert_eq!(game.status(), GameStatus::InsufficientMaterial, "{fen}");
+        }
+        // Opposite-colored bishops and two knights can still mate.
+        for fen in [
+            "4kb2/8/8/8/8/8/8/3BK3 w - - 0 1", // f8 dark, d1 light
+            "4k3/8/8/8/8/8/8/3NKN2 w - - 0 1",
+        ] {
+            let game = Game::from_fen(fen).unwrap();
+            assert_eq!(game.status(), GameStatus::Ongoing, "{fen}");
+        }
     }
 
     #[test]
