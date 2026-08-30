@@ -143,10 +143,15 @@ class SupervisedDataset:
         board = chess.Board(self.fens[i].decode())
         move = chess.Move.from_uci(self.moves[i].decode())
         planes = torch.from_numpy(encode_planes(board))
-        # One-hot soft target: the same (idx, prob) shape SelfplayDataset
-        # yields, so one loss function serves both training modes.
-        idx = torch.tensor([policy_index(move, board.turn)], dtype=torch.long)
-        prob = torch.ones(1)
+        # One-hot soft target, padded to the same [MAX_PI] shape
+        # SelfplayDataset yields so both modes batch together (replay-buffer
+        # mixes concatenate the two dataset kinds in one DataLoader).
+        from .selfplay import MAX_PI
+
+        idx = torch.zeros(MAX_PI, dtype=torch.long)
+        prob = torch.zeros(MAX_PI)
+        idx[0] = policy_index(move, board.turn)
+        prob[0] = 1.0
         return planes, idx, prob, float(self.z[i])
 
 

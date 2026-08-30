@@ -64,7 +64,7 @@ def evaluate(model, loader, device) -> dict[str, float]:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("data", help=".npz built by gambito_train.dataset")
+    ap.add_argument("data", nargs="+", help=".npz file(s); mixing supervised and self-play is fine")
     ap.add_argument("--epochs", type=int, default=1)
     ap.add_argument("--batch-size", type=int, default=512)
     ap.add_argument("--lr", type=float, default=1e-3)
@@ -76,14 +76,19 @@ def main() -> None:
     args = ap.parse_args()
 
     import numpy as np
+    from torch.utils.data import ConcatDataset
 
     from .selfplay import SelfplayDataset
 
     # Self-play .npz files carry visit distributions ("pis"); supervised
-    # ones carry single played moves ("moves"). Same loss either way.
-    with np.load(args.data, allow_pickle=False) as probe:
-        selfplay = "pis" in probe.files
-    dataset = SelfplayDataset(args.data) if selfplay else SupervisedDataset(args.data)
+    # ones carry single played moves ("moves"). Same loss and target shapes
+    # either way, so a replay-buffer mix is just a concatenation.
+    parts = []
+    for path in args.data:
+        with np.load(path, allow_pickle=False) as probe:
+            selfplay = "pis" in probe.files
+        parts.append(SelfplayDataset(path) if selfplay else SupervisedDataset(path))
+    dataset = parts[0] if len(parts) == 1 else ConcatDataset(parts)
     val_len = max(1, len(dataset) // 50)
     train_set, val_set = random_split(
         dataset,
