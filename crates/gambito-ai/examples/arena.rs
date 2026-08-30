@@ -6,13 +6,18 @@
 //!       candidate.cyw [champion.cyw] [--games N] [--sims N]
 //!
 //! With one path, the opponent is the model embedded in the binary.
-//! Colors alternate every game; the score and an Elo estimate are printed
-//! from the FIRST (candidate) model's point of view.
+//!
+//! MCTS is deterministic, so equal games would repeat move for move.
+//! Games are played in PAIRS instead: each pair starts from the same short
+//! random opening (seeded, reproducible) and swaps colors, so an unbalanced
+//! opening penalizes both models equally. Score and Elo estimate are from
+//! the FIRST (candidate) model's point of view.
 
 use gambito_ai::{Brain, MctsBrain, NnEval};
 use gambito_engine::{Color, Game, GameStatus};
 
 const MAX_PLIES: usize = 300;
+const OPENING_PLIES: usize = 4;
 
 fn brain(path: Option<&str>, sims: u32) -> MctsBrain<NnEval> {
     let eval = match path {
@@ -45,9 +50,14 @@ fn main() {
     for g in 0..games {
         let mut candidate = brain(Some(candidate_path), sims);
         let mut champion = brain(champion_path, sims);
-        // Alternate who takes White each game.
+        // Games come in pairs: same seeded random opening, colors swapped.
         let candidate_is_white = g % 2 == 0;
+        let mut rng = fastrand::Rng::with_seed(1000 + (g / 2) as u64);
         let mut game = Game::new();
+        for _ in 0..OPENING_PLIES {
+            let moves = game.legal_moves();
+            game.play(moves.as_slice()[rng.usize(..moves.len())]);
+        }
         while !game.status().is_over() && game.moves_played().len() < MAX_PLIES {
             let white_to_move = game.position().side_to_move == Color::White;
             let mover =
