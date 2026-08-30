@@ -24,13 +24,18 @@ from .model import GambitoNet, NetConfig, parameter_count
 def loss_fn(
     policy_logits: torch.Tensor,  # [B, 4168]
     value: torch.Tensor,  # [B], tanh output in [-1, 1]
-    target_move: torch.Tensor,  # [B], class index of the move played
+    idx: torch.Tensor,  # [B, K] policy indices of the target distribution
+    prob: torch.Tensor,  # [B, K] their probabilities (rows sum to 1; pad = 0)
     target_z: torch.Tensor,  # [B], game outcome in {-1, 0, 1}
 ) -> torch.Tensor:
     # AlphaZero's L = (z - v)^2 - pi^T log(p), with the value term at 0.5:
-    # in supervised bootstrap z is noisy (flagged wins, swindles), while the
-    # move played by a strong human is a clean label — let policy lead.
-    return F.cross_entropy(policy_logits, target_move) + 0.5 * F.mse_loss(value, target_z)
+    # z is the noisiest label in both modes (flagged wins in human games,
+    # temperature blunders in self-play) — let policy lead. pi is sparse:
+    # supervised rows are one-hot (K=1), self-play rows are MCTS visit
+    # distributions; padding entries have prob 0 and drop out of the sum.
+    logp = F.log_softmax(policy_logits, dim=1)
+    policy_loss = -(prob * logp.gather(1, idx)).sum(dim=1).mean()
+    return policy_loss + 0.5 * F.mse_loss(value, target_z)
 
 
 @torch.no_grad()
@@ -38,13 +43,16 @@ def evaluate(model, loader, device) -> dict[str, float]:
     model.eval()
     total = correct = 0
     loss_sum = value_err = 0.0
-    for planes, target_move, target_z in loader:
+    for planes, idx, prob, target_z in loader:
         planes = planes.to(device)
-        target_move = target_move.to(device)
+        idx = idx.to(device)
+        prob = prob.to(device)
         target_z = target_z.float().to(device)
         policy, value = model(planes)
-        loss_sum += loss_fn(policy, value, target_move, target_z).item() * len(planes)
-        correct += (policy.argmax(dim=1) == target_move).sum().item()
+        loss_sum += loss_fn(policy, value, idx, prob, target_z).item() * len(planes)
+        # "Accuracy" = did the net's top move match the target's top move.
+        top_target = idx.gather(1, prob.argmax(dim=1, keepdim=True)).squeeze(1)
+        correct += (policy.argmax(dim=1) == top_target).sum().item()
         value_err += (value - target_z).abs().sum().item()
         total += len(planes)
     return {
@@ -64,9 +72,18 @@ def main() -> None:
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--out", default="checkpoints")
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    ap.add_argument("--init", default=None, help="checkpoint to fine-tune from")
     args = ap.parse_args()
 
-    dataset = SupervisedDataset(args.data)
+    import numpy as np
+
+    from .selfplay import SelfplayDataset
+
+    # Self-play .npz files carry visit distributions ("pis"); supervised
+    # ones carry single played moves ("moves"). Same loss either way.
+    with np.load(args.data, allow_pickle=False) as probe:
+        selfplay = "pis" in probe.files
+    dataset = SelfplayDataset(args.data) if selfplay else SupervisedDataset(args.data)
     val_len = max(1, len(dataset) // 50)
     train_set, val_set = random_split(
         dataset,
@@ -92,6 +109,10 @@ def main() -> None:
 
     cfg = NetConfig()
     model = GambitoNet(cfg).to(args.device)
+    if args.init:
+        ckpt = torch.load(args.init, map_location=args.device, weights_only=True)
+        model.load_state_dict(ckpt["model"])
+        print(f"fine-tuning from {args.init} (val {ckpt.get('val')})")
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     print(
         f"{parameter_count(model):,} params · {len(train_set):,} train / "
@@ -103,11 +124,12 @@ def main() -> None:
     for epoch in range(1, args.epochs + 1):
         model.train()
         start = time.time()
-        for step, (planes, target_move, target_z) in enumerate(train_loader, 1):
+        for step, (planes, idx, prob, target_z) in enumerate(train_loader, 1):
             planes = planes.to(args.device, non_blocking=True)
-            target_move = target_move.to(args.device, non_blocking=True)
+            idx = idx.to(args.device, non_blocking=True)
+            prob = prob.to(args.device, non_blocking=True)
             target_z = target_z.float().to(args.device, non_blocking=True)
-            loss = loss_fn(*model(planes), target_move, target_z)
+            loss = loss_fn(*model(planes), idx, prob, target_z)
             opt.zero_grad(set_to_none=True)
             loss.backward()
             opt.step()

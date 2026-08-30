@@ -143,8 +143,11 @@ class SupervisedDataset:
         board = chess.Board(self.fens[i].decode())
         move = chess.Move.from_uci(self.moves[i].decode())
         planes = torch.from_numpy(encode_planes(board))
-        target = policy_index(move, board.turn)
-        return planes, target, float(self.z[i])
+        # One-hot soft target: the same (idx, prob) shape SelfplayDataset
+        # yields, so one loss function serves both training modes.
+        idx = torch.tensor([policy_index(move, board.turn)], dtype=torch.long)
+        prob = torch.ones(1)
+        return planes, idx, prob, float(self.z[i])
 
 
 def main() -> None:
