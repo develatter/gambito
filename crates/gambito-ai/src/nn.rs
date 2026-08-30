@@ -223,6 +223,12 @@ impl NnEval {
         NnEval { net: Network::load(EMBEDDED_MODEL).expect("embedded model.cyw") }
     }
 
+    /// Loads a network from raw .cyw bytes (e.g. a candidate model file,
+    /// for arena matches against the embedded one).
+    pub fn from_bytes(data: &[u8]) -> Result<NnEval, String> {
+        Ok(NnEval { net: Network::load(data)? })
+    }
+
     pub fn network(&self) -> &Network {
         &self.net
     }
