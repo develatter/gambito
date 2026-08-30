@@ -5,9 +5,11 @@
 //! through: MaterialEval today, the int8 network when training lands (M2).
 
 mod brain;
+pub mod encode;
 mod eval;
 mod mcts;
 
 pub use brain::{Brain, MctsBrain, RandomBrain};
+pub use encode::{encode_planes, policy_index, PLANE_COUNT, POLICY_SIZE};
 pub use eval::{Evaluator, MaterialEval};
 pub use mcts::Mcts;
