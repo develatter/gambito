@@ -46,7 +46,27 @@ Scalar in `[-1, 1]`, from the side to move's perspective: +1 = side to move
 wins, 0 = draw. Training targets use game outcome z; MCTS backs up values
 negated at each ply.
 
-## Model file (`model.cyw`, later phase)
+## Model file (`model.cyw`)
 
-Magic `CYW1`, then per-layer: i8 weight blob + f32 scale + i32 bias. Defined
-in detail when the export lands; this section is a placeholder on purpose.
+Little-endian throughout. Produced by `python -m gambito_train.export`,
+consumed by `gambito-ai/src/nn.rs`.
+
+```
+"CYW1"                        magic, 4 bytes
+u32 x5                        channels, blocks, policy_channels,
+                              value_channels, value_hidden
+then, per layer, in this exact order:
+  i8[len(weight)]             quantized weights
+  f32                         scale (weight = q * scale)
+  f32[out]                    bias, full precision
+```
+
+Layer order: `stem`, then per residual block `conv1`, `conv2`, then
+`policy_conv`, `policy_fc`, `value_conv`, `value_fc1`, `value_fc2`.
+
+Every Conv+BatchNorm pair is folded into a single biased conv before
+quantization, so the file contains no BatchNorm. Quantization is symmetric
+per-layer int8 (`scale = max|w| / 127`); inference dequantizes to f32 at
+load time and runs plain f32 math. Weight shapes follow PyTorch layout:
+convs `[out][in][k][k]`, linears `[out][in]`; activations flatten
+channel-major (`c*64 + rank*8 + file`), matching the input plane layout.

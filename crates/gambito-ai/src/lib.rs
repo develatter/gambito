@@ -8,8 +8,10 @@ mod brain;
 pub mod encode;
 mod eval;
 mod mcts;
+pub mod nn;
 
 pub use brain::{Brain, MctsBrain, RandomBrain};
 pub use encode::{encode_planes, policy_index, PLANE_COUNT, POLICY_SIZE};
 pub use eval::{Evaluator, MaterialEval};
 pub use mcts::Mcts;
+pub use nn::{Network, NnEval};

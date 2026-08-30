@@ -26,3 +26,7 @@ lto = "fat"
 codegen-units = 1
 strip = "symbols"
 panic = "abort"
+
+# The NN inference is the one hot loop in the project: speed over size there.
+[profile.release.package.gambito-ai]
+opt-level = 3
