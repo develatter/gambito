@@ -73,15 +73,22 @@ def main() -> None:
         [len(dataset) - val_len, val_len],
         generator=torch.Generator().manual_seed(7),
     )
+    # Python 3.14 defaults multiprocessing to forkserver, which PICKLES the
+    # whole dataset into every worker (25M samples x N workers = OOM). fork
+    # shares it copy-on-write instead; workers never touch CUDA, so it's safe.
+    ctx = "fork" if args.workers > 0 else None
     train_loader = DataLoader(
         train_set,
         batch_size=args.batch_size,
         shuffle=True,
         num_workers=args.workers,
+        multiprocessing_context=ctx,
         pin_memory=True,
         drop_last=True,
     )
-    val_loader = DataLoader(val_set, batch_size=args.batch_size, num_workers=2)
+    val_loader = DataLoader(
+        val_set, batch_size=args.batch_size, num_workers=2, multiprocessing_context="fork"
+    )
 
     cfg = NetConfig()
     model = GambitoNet(cfg).to(args.device)

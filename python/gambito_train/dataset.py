@@ -24,6 +24,11 @@ import numpy as np
 RESULT_TO_Z = {"1-0": 1, "0-1": -1, "1/2-1/2": 0}
 
 
+def _as_bytes(a: np.ndarray) -> np.ndarray:
+    """Backward compat: older .npz files stored unicode arrays."""
+    return a if a.dtype.kind == "S" else np.char.encode(a, "ascii")
+
+
 def open_pgn(path: str | Path):
     """Opens a .pgn or Lichess .pgn.zst as a text stream."""
     path = Path(path)
@@ -102,10 +107,13 @@ def build_dataset(
             fens.append(fen)
             moves.append(uci)
             zs.append(z)
+    # dtype "S" (bytes) is 4x smaller in RAM than numpy's default 4-bytes-
+    # per-char unicode — at 25M samples that is the difference between a
+    # 2 GB and a 9 GB resident dataset.
     np.savez_compressed(
         out_path,
-        fens=np.array(fens),
-        moves=np.array(moves),
+        fens=np.array(fens, dtype="S"),
+        moves=np.array(moves, dtype="S"),
         z=np.array(zs, dtype=np.int8),
     )
     return len(fens)
@@ -120,8 +128,8 @@ class SupervisedDataset:
 
     def __init__(self, npz_path: str | Path):
         data = np.load(npz_path, allow_pickle=False)
-        self.fens = data["fens"]
-        self.moves = data["moves"]
+        self.fens = _as_bytes(data["fens"])
+        self.moves = _as_bytes(data["moves"])
         self.z = data["z"]
 
     def __len__(self) -> int:
@@ -132,8 +140,8 @@ class SupervisedDataset:
 
         from .encoding import encode_planes, policy_index
 
-        board = chess.Board(str(self.fens[i]))
-        move = chess.Move.from_uci(str(self.moves[i]))
+        board = chess.Board(self.fens[i].decode())
+        move = chess.Move.from_uci(self.moves[i].decode())
         planes = torch.from_numpy(encode_planes(board))
         target = policy_index(move, board.turn)
         return planes, target, float(self.z[i])
