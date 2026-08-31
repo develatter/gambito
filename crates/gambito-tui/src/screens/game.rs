@@ -10,6 +10,8 @@ use gambito_engine::{Bitboard, Color, Game, Move, PieceKind, Square};
 use ratatui::layout::{Constraint, Layout};
 use ratatui::widgets::Block;
 use ratatui::Frame;
+use std::sync::mpsc::{channel, Receiver};
+use std::thread;
 
 pub struct GameScreen {
     game: Game,
@@ -25,7 +27,11 @@ pub struct GameScreen {
     /// Board geometry from the last render, for mouse hit-testing.
     geom: BoardGeometry,
     /// When set, this brain plays Black and replies after each human move.
+    /// `None` while the brain is off thinking in the worker thread.
     opponent: Option<Box<dyn Brain>>,
+    /// While the AI thinks, the brain lives in a worker thread; the reply
+    /// (and the brain itself, handed back) arrive through this channel.
+    thinking: Option<Receiver<(Box<dyn Brain>, Option<Move>)>>,
 }
 
 impl GameScreen {
@@ -41,6 +47,7 @@ impl GameScreen {
             confirm_quit: false,
             geom: BoardGeometry::default(),
             opponent: None,
+            thinking: None,
         }
     }
 
@@ -99,6 +106,13 @@ impl GameScreen {
                 _ => {}
             }
             return Transition::None;
+        }
+        // While the worker thread holds the brain it's Black's turn: without
+        // this guard the human could undo mid-search or move Black's pieces.
+        if self.thinking.is_some() {
+            if let Action::Undo | Action::FocusInput | Action::Click { .. } = action {
+                return Transition::None;
+            }
         }
         match action {
             Action::Quit => {
@@ -179,14 +193,45 @@ impl GameScreen {
         self.maybe_ai_reply();
     }
 
+    /// Hands the brain and a snapshot of the game to a worker thread. The
+    /// reply is picked up by `poll_ai`, never here, so the human's move
+    /// always renders before the AI's answer.
     fn maybe_ai_reply(&mut self) {
-        let Some(brain) = &mut self.opponent else { return };
         if self.game.status().is_over() || self.game.position().side_to_move != Color::Black {
             return;
         }
-        if let Some(mv) = brain.choose(&self.game) {
-            self.game.play(mv);
+        let Some(mut brain) = self.opponent.take() else { return };
+        self.message = Some(format!("{} is thinking…", brain.name()));
+        let game = self.game.clone();
+        let (tx, rx) = channel();
+        thread::spawn(move || {
+            let mv = brain.choose(&game);
+            // The screen may be gone (user left to the menu); that's fine.
+            let _ = tx.send((brain, mv));
+        });
+        self.thinking = Some(rx);
+    }
+
+    /// Called by the main loop right AFTER each draw. Applying the reply only
+    /// here guarantees at least one frame showed the human's move alone,
+    /// even when the brain answers faster than a frame.
+    pub fn poll_ai(&mut self) {
+        let Some(rx) = &self.thinking else { return };
+        let Ok((brain, mv)) = rx.try_recv() else { return };
+        self.thinking = None;
+        self.opponent = Some(brain);
+        self.message = None;
+        // The handle() guards keep the game frozen while thinking, but a
+        // reply is cheap to re-validate against the live game: still Black
+        // to move, not over, and the move still legal.
+        let Some(mv) = mv else { return };
+        if self.game.status().is_over()
+            || self.game.position().side_to_move != Color::Black
+            || !self.game.legal_moves().as_slice().contains(&mv)
+        {
+            return;
         }
+        self.game.play(mv);
     }
 
     fn submit_san(&mut self) {
@@ -348,7 +393,17 @@ mod tests {
         let mut s = screen().with_opponent(Box::new(RandomBrain::new(7)));
         click_square(&mut s, "e2");
         click_square(&mut s, "e4");
-        assert_eq!(s.game.moves_played().len(), 2, "AI should reply at once");
+        // The reply comes from a worker thread; handle() itself must never
+        // apply it — that's the "human's move paints first" guarantee.
+        assert_eq!(s.game.moves_played().len(), 1, "reply must not be synchronous");
+        for _ in 0..500 {
+            s.poll_ai();
+            if s.game.moves_played().len() == 2 {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(2));
+        }
+        assert_eq!(s.game.moves_played().len(), 2, "AI should reply");
         assert_eq!(s.game.position().side_to_move, Color::White);
         s.handle(Action::Undo);
         assert_eq!(s.game.moves_played().len(), 0);

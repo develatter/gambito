@@ -58,6 +58,12 @@ impl App {
                 Screen::Game(game) => game.render(frame),
             })?;
 
+            // After the draw, so a finished AI reply is applied only once the
+            // human's own move has been on screen for at least one frame.
+            if let Screen::Game(game) = &mut self.screen {
+                game.poll_ai();
+            }
+
             if !crossterm::event::poll(Duration::from_millis(50))? {
                 continue;
             }
