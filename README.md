@@ -8,11 +8,13 @@ convolutional network trained in PyTorch but executed by **hand-written Rust inf
 embedded in a single ~2 MB binary.
 
 <p align="center">
-  <img src="docs/img/board.png" alt="Gambito in-game board with 8-bit piece sprites" width="720">
-</p>
-<p align="center">
   <img src="docs/img/menu.png" alt="Gambito main menu" width="324">
 </p>
+
+<p align="center">
+  <img src="docs/img/board.png" alt="Gambito in-game board with 8-bit piece sprites" width="720">
+</p>
+
 
 ## Features
 
