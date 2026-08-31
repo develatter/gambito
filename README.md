@@ -7,16 +7,12 @@ player: move generation verified with perft, a PUCT Monte-Carlo tree search, and
 convolutional network trained in PyTorch but executed by **hand-written Rust inference**
 embedded in a single ~2 MB binary.
 
-```
-  ┌───────────────────────────┐
-  │  ♜ ♞ ♝ ♛ ♚ ♝ ♞ ♜   moves │
-  │  ♟ ♟ ♟ ♟ ♟ ♟ ♟ ♟   1. e4 │
-  │  · · · · · · · ·    e5   │
-  │  · · · · ♙ · · ·   2. ♘f3│
-  │  ♙ ♙ ♙ ♙ · ♙ ♙ ♙         │
-  │  ♖ ♘ ♗ ♕ ♔ ♗ ♘ ♖         │
-  └───────────────────────────┘
-```
+<p align="center">
+  <img src="docs/img/board.png" alt="Gambito in-game board with 8-bit piece sprites" width="720">
+</p>
+<p align="center">
+  <img src="docs/img/menu.png" alt="Gambito main menu" width="324">
+</p>
 
 ## Features
 
