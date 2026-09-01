@@ -64,12 +64,44 @@ net beat the 4.4M bootstrap net 8W 9D 3L (Elo +89) and was crowned.
 triangulation against the Maia models, roughly 1400–1600 Lichess Elo
 with wide error bars.
 
+## In progress — self-play generation 2 (handoff, 2026-09-01)
+
+State when the last session ended:
+
+- **Generation done**: 5,992 games at 128 sims (14 threads, ~14h),
+  **563,603 positions** in `~/gambito-data/selfplay-r2.jsonl` — 4x
+  generation 1. The run stopped 8 games short because closing the
+  terminal window killed its cgroup (Hyprland scopes; `nohup` does not
+  protect against that). Data is intact.
+- **Packed**: `~/gambito-data/selfplay-r2.npz` (563,603 samples).
+- **Steps 3–5 launched** as a detached systemd user unit `gen2-resume`
+  (script `~/gambito-data/gen2-resume.sh`, log `gen2-resume.log`):
+  fine-tune from `checkpoints-full/epoch6.pt` on self-play + a 1.5M
+  supervised anchor (`elite-anchor-1500k.npz`, 3 epochs, lr 1e-4) →
+  `checkpoints-sp2/`, export → `candidate-sp2.cyw` + golden, arena
+  20 games @100 sims vs the embedded champion → `arena-sp2.log`.
+
+Next session, first thing:
+
+    tail -3 ~/gambito-data/arena-sp2.log
+
+- Score > 50% → crown it: copy `candidate-sp2.cyw` to
+  `crates/gambito-ai/model.cyw` and `candidate-sp2_golden.txt` to
+  `crates/gambito-ai/tests/nn_golden.txt`, run the workspace tests,
+  commit, ff-merge, push.
+- Score ≤ 50% → the champion stands; decide between generation 3 with
+  more volume/sims or moving on to tree reuse / M3.
+- If the unit died: `systemctl --user status gen2-resume`, then rerun
+  `bash ~/gambito-data/gen2-resume.sh` (steps are idempotent).
+
+Overnight-run lesson: launch long jobs with
+`systemd-run --user --collect bash script.sh` (own unit), not `nohup`.
+
 ## Pending
 
 ### M2 follow-ups (optional — the AI works)
 
-- **Self-play generation 2**: ~6,000 games overnight with the existing
-  pipeline; repeat pack → mixed fine-tune → arena.
+- **Self-play generation 2 verdict** (see "In progress" above).
 - **MCTS tree reuse**: keep the subtree between moves instead of
   discarding it — free strength at the same per-move cost.
 - **Absolute Elo measurement**: a UCI bridge to Stockfish with
